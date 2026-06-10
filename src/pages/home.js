@@ -69,7 +69,7 @@ export async function renderHome(root, { navigate }) {
       <nav class="home-nav">
         <div class="home-nav-brand">
           ${logoMark(28)}
-          <span>Bilvantis <span class="accent">WatchTower</span></span>
+          <span class="accent">WatchTower</span>
         </div>
         <div class="home-nav-actions">
           <div class="user-chip">
@@ -117,17 +117,7 @@ async function loadProjects(root, { user }) {
     main.innerHTML = `
       <div class="home-hero">
         <div class="home-hero-mark">
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-            <rect width="64" height="64" rx="16" fill="url(#hero-grad)"/>
-            <path d="M18 23 L32 44 L46 23" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="32" cy="20" r="3" fill="white"/>
-            <defs>
-              <linearGradient id="hero-grad" x1="0" y1="0" x2="64" y2="64">
-                <stop offset="0" stop-color="#0065FF"/>
-                <stop offset="1" stop-color="#0052CC"/>
-              </linearGradient>
-            </defs>
-          </svg>
+          <img src="/image.png" width="64" height="64" alt="Bilvantis WatchTower" style="display:block;width:64px;height:64px;object-fit:contain;border-radius:16px"/>
         </div>
         <h1 class="home-hero-title">Bilvantis <span class="accent">WatchTower</span></h1>
         <p class="home-hero-subtitle">

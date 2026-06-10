@@ -19,6 +19,12 @@ const settingsIcon = `
   </svg>
 `;
 
+const auditIcon = `
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+    <path d="M3 4.5h14M3 8h14M3 11.5h10M3 15h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+`;
+
 const plusIcon = `
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
     <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -42,6 +48,14 @@ const docsIcon = `
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
     <path d="M4 2.5h6.5l3 3V13a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
     <path d="M10 2.5V6h3.5M6 8.5h4M6 11h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+`;
+
+const testIcon = `
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <path d="M3.5 2.5h9M5 2.5v3.7l-2.4 5.1a1 1 0 0 0 .9 1.4h8.9a1 1 0 0 0 .9-1.4L11 6.2V2.5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="7.5" cy="10" r="0.8" fill="currentColor"/>
+    <circle cx="9.5" cy="11.5" r="0.6" fill="currentColor"/>
   </svg>
 `;
 
@@ -125,11 +139,14 @@ function colorizeBash(src) {
 export async function renderProjectDashboard(root, { navigate, projectId }) {
   root.innerHTML = `<div class="app-loading"><div class="app-loading-spinner"></div></div>`;
 
-  let project, endpoints;
+  let project, endpoints, stats;
   try {
-    [project, endpoints] = await Promise.all([
+    [project, endpoints, stats] = await Promise.all([
       api.getProject(projectId),
       api.listEndpoints(projectId),
+      api.getProjectStats(projectId).catch(() => ({
+        total_requests: 0, total_blocked: 0, total_entities_masked: 0, total_tokens: 0,
+      })),
     ]);
   } catch (err) {
     if (String(err.message || '').toLowerCase().includes('credentials')) {
@@ -148,12 +165,13 @@ export async function renderProjectDashboard(root, { navigate, projectId }) {
   }
 
   const user = auth.getUser();
-  root.innerHTML = renderShell({ user, project, endpoints });
+  root.innerHTML = renderShell({ user, project, endpoints, stats });
   mount(root, { project, endpoints, navigate });
 }
 
-function renderShell({ user, project, endpoints }) {
+function renderShell({ user, project, endpoints, stats }) {
   const hasEndpoints = endpoints.length > 0;
+  const hasUsage = (stats?.total_requests || 0) + (stats?.total_entities_masked || 0) > 0;
 
   return `
     <div class="dash-shell">
@@ -161,7 +179,7 @@ function renderShell({ user, project, endpoints }) {
         <div class="ob-nav-left">
           <div class="ob-nav-brand">
             ${logoMark(28)}
-            <span>Bilvantis <span class="accent">WatchTower</span></span>
+            <span class="accent">WatchTower</span>
           </div>
           <nav class="ob-breadcrumb" aria-label="Breadcrumb">
             <a href="/" data-link>WatchTower</a>
@@ -190,6 +208,9 @@ function renderShell({ user, project, endpoints }) {
             ${project.description ? `<p class="dash-sub">${escapeHtml(project.description)}</p>` : ''}
           </div>
           <div class="dash-header-actions">
+            <button class="dash-audit-btn" id="dash-audit">
+              ${auditIcon}<span>Audit Log</span>
+            </button>
             <button class="dash-icon-btn" id="dash-settings" aria-label="Settings" title="Settings">
               ${settingsIcon}
             </button>
@@ -204,8 +225,9 @@ function renderShell({ user, project, endpoints }) {
         </header>
 
         ${project.is_paused ? pausedBanner() : ''}
-        ${kpiStrip()}
-        ${hasEndpoints ? emptyTrafficHero(endpoints) : emptyEndpointsHero()}
+        ${kpiStrip(stats)}
+        ${hasEndpoints && !hasUsage ? emptyTrafficHero(endpoints) : ''}
+        ${!hasEndpoints ? emptyEndpointsHero() : ''}
         ${hasEndpoints ? endpointsPanel(endpoints, project) : ''}
       </div>
     </div>
@@ -224,19 +246,43 @@ function pausedBanner() {
   `;
 }
 
-function kpiStrip() {
+function kpiStrip(stats) {
+  const s = stats || { total_requests: 0, total_blocked: 0, total_entities_masked: 0, total_tokens: 0 };
+  const fmt = (n) => {
+    const v = Number(n) || 0;
+    if (v === 0) return '—';
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 10_000) return `${(v / 1_000).toFixed(1)}K`;
+    return v.toLocaleString();
+  };
   const tiles = [
-    { label: 'Total requests', hint: 'Awaiting traffic' },
-    { label: 'Masked content', hint: 'PII / PHI redactions' },
-    { label: 'Blocked', hint: 'Policy or hard cap' },
-    { label: 'Spend today', hint: 'Resets 00:00 UTC' },
+    {
+      label: 'Total requests',
+      value: fmt(s.total_requests),
+      hint: s.total_requests > 0 ? 'Across all endpoints' : 'Awaiting traffic',
+    },
+    {
+      label: 'Entities masked',
+      value: fmt(s.total_entities_masked),
+      hint: 'PII redactions',
+    },
+    {
+      label: 'Blocked',
+      value: fmt(s.total_blocked),
+      hint: s.total_blocked > 0 ? 'Policy or pause' : 'None blocked',
+    },
+    {
+      label: 'Total tokens',
+      value: fmt(s.total_tokens),
+      hint: 'Prompt + completion',
+    },
   ];
   return `
     <section class="kpi-strip">
       ${tiles.map((t) => `
         <div class="kpi-tile">
           <div class="kpi-tile-label">${t.label}</div>
-          <div class="kpi-tile-value">—</div>
+          <div class="kpi-tile-value">${t.value}</div>
           <div class="kpi-tile-hint">${t.hint}</div>
         </div>
       `).join('')}
@@ -300,9 +346,12 @@ function endpointsPanel(endpoints, project) {
   `;
 }
 
+const LOCAL_PROXY_BASE = 'http://127.0.0.1:8888';
+
 function endpointRow(e, project) {
   const cfg = e.config || {};
   const baseUrl = cfg.base_url || '';
+  const localUrl = `${LOCAL_PROXY_BASE}/v1/${e.perimeter_id}`;
   const apiKey = cfg.api_key || '';
   const providers = Array.isArray(cfg.providers) ? cfg.providers.filter((p) => p.key) : [];
   const compliance = Array.isArray(cfg.compliance) ? cfg.compliance : [];
@@ -336,9 +385,17 @@ function endpointRow(e, project) {
 
       <div class="ep-creds">
         <div class="ep-cred-row">
-          <span class="ep-cred-label">Base URL</span>
+          <span class="ep-cred-label">Production</span>
           <code class="ep-cred-value">${escapeHtml(baseUrl)}</code>
           <button class="ob-copy-btn" data-copy-text="${escapeHtml(baseUrl)}">${copyIcon}<span>Copy</span></button>
+        </div>
+        <div class="ep-cred-row">
+          <span class="ep-cred-label">
+            Local dev
+            <span class="ep-cred-pulse" title="Live on this host"></span>
+          </span>
+          <code class="ep-cred-value">${escapeHtml(localUrl)}</code>
+          <button class="ob-copy-btn" data-copy-text="${escapeHtml(localUrl)}">${copyIcon}<span>Copy</span></button>
         </div>
         <div class="ep-cred-row">
           <span class="ep-cred-label">API key</span>
@@ -366,6 +423,7 @@ function endpointRow(e, project) {
       </div>
 
       <div class="ep-actions">
+        <button class="ep-action-btn ep-action-test" data-test="${e.id}">${testIcon}<span>Test endpoint</span></button>
         <button class="ep-action-btn" data-docs="${e.id}">${docsIcon}<span>View docs</span></button>
         <button
           class="ep-action-btn ep-action-pause"
@@ -395,6 +453,9 @@ function mount(root, { project, endpoints, navigate }) {
 
   const settingsBtn = root.querySelector('#dash-settings');
   if (settingsBtn) settingsBtn.addEventListener('click', () => navigate(`/projects/${project.id}/settings`));
+
+  const auditBtn = root.querySelector('#dash-audit');
+  if (auditBtn) auditBtn.addEventListener('click', () => navigate(`/projects/${project.id}/audit`));
 
   const pauseBtn = root.querySelector('#dash-toggle-pause');
   if (pauseBtn) {
@@ -471,21 +532,34 @@ function mount(root, { project, endpoints, navigate }) {
       if (ep) openDocsModal(ep);
     });
   });
+
+  root.querySelectorAll('[data-test]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = Number(btn.getAttribute('data-test'));
+      navigate(`/projects/${project.id}/endpoints/${id}/test`);
+    });
+  });
 }
 
 function openDocsModal(endpoint) {
   const cfg = endpoint.config || {};
-  const baseUrl = cfg.base_url || '';
+  const brandedUrl = cfg.base_url || '';
+  const localUrl = `${LOCAL_PROXY_BASE}/v1/${endpoint.perimeter_id}`;
   const apiKey = cfg.api_key || '';
   const providers = (cfg.providers || []).filter((p) => p.key);
   const firstProvider = providers[0]?.provider || 'anthropic';
   const model = PROVIDER_MODEL_HINT[firstProvider] || 'claude-sonnet-4-6';
 
+  // Snippets use the local working URL so copy-paste runs immediately.
+  const baseUrl = localUrl;
+
   const samples = {
     langgraph: {
-      label: 'LangGraph', sub: 'Python · LangChain ChatOpenAI',
+      label: 'LangGraph', sub: `Python · LangChain ChatOpenAI`,
       lang: 'python',
       code: `# LangGraph node — same SDK, new base URL
+# Production: ${brandedUrl}
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
@@ -500,7 +574,8 @@ response = llm.invoke("Summarize the policy doc.")`,
     openai: {
       label: 'OpenAI SDK', sub: 'Python · OpenAI-compatible',
       lang: 'python',
-      code: `from openai import OpenAI
+      code: `# Production: ${brandedUrl}
+from openai import OpenAI
 
 client = OpenAI(
     base_url="${baseUrl}",
@@ -516,7 +591,8 @@ print(resp.choices[0].message.content)`,
     curl: {
       label: 'cURL', sub: 'Shell',
       lang: 'bash',
-      code: `curl ${baseUrl}/chat/completions \\
+      code: `# Production: ${brandedUrl}
+curl ${baseUrl}/chat/completions \\
   -H "Authorization: Bearer ${apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{

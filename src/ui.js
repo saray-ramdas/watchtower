@@ -1,21 +1,18 @@
 export const logoMark = (size = 32) => `
-  <svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="8" fill="url(#wt-grad)"/>
-    <path d="M9 11.5 L16 22 L23 11.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <circle cx="16" cy="10" r="1.8" fill="white"/>
-    <defs>
-      <linearGradient id="wt-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#0065FF"/>
-        <stop offset="1" stop-color="#0052CC"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <img
+    src="/image.png"
+    width="${size}"
+    height="${size}"
+    alt="Bilvantis WatchTower"
+    style="display:block;width:${size}px;height:${size}px;object-fit:contain;border-radius:${Math.round(size / 4)}px"
+  />
 `;
 
-export const brandWordmark = () => `
+export const brandWordmark = (tagline) => `
   <div class="auth-brand">
-    <div class="auth-brand-mark">${logoMark(32)}</div>
-    <div class="auth-brand-text">Bilvantis <span class="accent">WatchTower</span></div>
+    <div class="auth-brand-mark auth-brand-mark-lg">${logoMark(184)}</div>
+    <div class="auth-brand-text"><span class="accent">WatchTower</span></div>
+    ${tagline ? `<div class="auth-brand-tagline">${tagline}</div>` : ''}
   </div>
 `;
 

@@ -56,4 +56,25 @@ export const api = {
       method: 'PUT', body: { key }, authed: true,
     }),
   listUsers: () => request('/api/users', { authed: true }),
+  maskText: (text, endpointId) => request('/api/test/mask', {
+    method: 'POST',
+    body: { text, endpoint_id: endpointId ?? null },
+    authed: true,
+  }),
+  getProjectStats: (projectId) => request(`/api/projects/${projectId}/stats`, { authed: true }),
+  listProjectEvents: (projectId, { suspiciousOnly = false, limit = 200, from = null, to = null } = {}) => {
+    const params = new URLSearchParams({
+      suspicious_only: String(suspiciousOnly),
+      limit: String(limit),
+    });
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return request(`/api/projects/${projectId}/events?${params.toString()}`, { authed: true });
+  },
+  finalizeEvent: (eventId, finalOutput) =>
+    request(`/api/test/events/${eventId}/finalize`, {
+      method: 'POST',
+      body: { final_output: finalOutput },
+      authed: true,
+    }),
 };

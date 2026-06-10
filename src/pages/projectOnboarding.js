@@ -177,7 +177,7 @@ function pageShell({ user, project }) {
         <div class="ob-nav-left">
           <div class="ob-nav-brand">
             ${logoMark(28)}
-            <span>Bilvantis <span class="accent">WatchTower</span></span>
+            <span class="accent">WatchTower</span>
           </div>
           <nav class="ob-breadcrumb" aria-label="Breadcrumb">
             <a href="/" data-link>WatchTower</a>
@@ -583,10 +583,9 @@ function mount(root, { state, project, navigate }) {
         perimeter_id: state.perimeter_id.trim(),
         config: {
           compliance: Array.from(state.compliance),
-          providers: state.providers.map(({ _id, checking, ...rest }) => ({
-            ...rest,
-            key: rest.key ? '••• stored as reference' : '',
-          })),
+          // Send REAL keys — the backend extracts them into the vault and
+          // replaces them with masked references before persisting to config.
+          providers: state.providers.map(({ _id, checking, ...rest }) => rest),
           budget: {
             daily_usd: state.daily_budget,
             monthly_usd: state.monthly_budget,

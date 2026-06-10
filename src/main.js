@@ -2,10 +2,12 @@ import './style.css';
 import { api, auth } from './api.js';
 import { renderHome } from './pages/home.js';
 import { renderLogin } from './pages/login.js';
+import { renderProjectAudit } from './pages/projectAudit.js';
 import { renderProjectDashboard } from './pages/projectDashboard.js';
 import { renderProjectOnboarding } from './pages/projectOnboarding.js';
 import { renderProjectSettings } from './pages/projectSettings.js';
 import { renderSignup } from './pages/signup.js';
+import { renderTestEndpoint } from './pages/testEndpoint.js';
 
 const root = document.querySelector('#app');
 
@@ -67,6 +69,20 @@ async function route() {
       projectId: Number(settingsMatch[1]),
       section: settingsMatch[2] || 'llm',
     });
+  }
+
+  const testMatch = path.match(/^\/projects\/(\d+)\/endpoints\/(\d+)\/test\/?$/);
+  if (testMatch) {
+    return renderTestEndpoint(root, {
+      navigate,
+      projectId: Number(testMatch[1]),
+      endpointId: Number(testMatch[2]),
+    });
+  }
+
+  const auditMatch = path.match(/^\/projects\/(\d+)\/audit\/?$/);
+  if (auditMatch) {
+    return renderProjectAudit(root, { navigate, projectId: Number(auditMatch[1]) });
   }
 
   const dashboardMatch = path.match(/^\/projects\/(\d+)\/?$/);

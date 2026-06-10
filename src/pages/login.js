@@ -5,7 +5,7 @@ export function renderLogin(root, { navigate }) {
   root.innerHTML = `
     <div class="auth-shell">
       <div class="auth-container">
-        ${brandWordmark()}
+        ${brandWordmark('Your one-click governance platform')}
         <div class="auth-card">
           <p class="auth-eyebrow">Sign in</p>
           <h1 class="auth-title">Welcome back</h1>

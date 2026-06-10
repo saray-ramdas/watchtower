@@ -95,7 +95,7 @@ function shell({ user, project, endpoints, users, section }) {
         <div class="ob-nav-left">
           <div class="ob-nav-brand">
             ${logoMark(28)}
-            <span>Bilvantis <span class="accent">WatchTower</span></span>
+            <span class="accent">WatchTower</span>
           </div>
           <nav class="ob-breadcrumb" aria-label="Breadcrumb">
             <a href="/" data-link>WatchTower</a>
