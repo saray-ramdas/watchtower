@@ -15,6 +15,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ClerkExchangeRequest(BaseModel):
+    session_token: str = Field(min_length=20)
+
+
 class UserResponse(BaseModel):
     id: int
     email: EmailStr

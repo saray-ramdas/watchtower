@@ -41,6 +41,10 @@ export const api = {
   setupStatus: () => request('/api/setup/status'),
   signup: (payload) => request('/api/auth/signup', { method: 'POST', body: payload }),
   login: (payload) => request('/api/auth/login', { method: 'POST', body: payload }),
+  exchangeClerkToken: (sessionToken) => request('/api/auth/clerk/exchange', {
+    method: 'POST',
+    body: { session_token: sessionToken },
+  }),
   me: () => request('/api/auth/me', { authed: true }),
   listProjects: () => request('/api/projects', { authed: true }),
   createProject: (payload) => request('/api/projects', { method: 'POST', body: payload, authed: true }),

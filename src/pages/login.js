@@ -1,4 +1,10 @@
 import { api, auth } from '../api.js';
+import {
+  exchangeCurrentClerkSession,
+  consumeClerkRedirectPending,
+  isClerkConfigured,
+  redirectToClerkSignIn,
+} from '../clerkAuth.js';
 import { alertIcon, brandWordmark } from '../ui.js';
 
 export function renderLogin(root, { navigate }) {
@@ -26,6 +32,13 @@ export function renderLogin(root, { navigate }) {
               <span>Sign in</span>
             </button>
           </form>
+
+          ${isClerkConfigured() ? `
+            <div class="auth-divider"><span>or</span></div>
+            <button class="btn btn-ghost btn-block clerk-toggle-btn" type="button" id="clerk-toggle">
+              <span>Continue with Clerk</span>
+            </button>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -59,4 +72,42 @@ export function renderLogin(root, { navigate }) {
       submit.innerHTML = `<span>Sign in</span>`;
     }
   });
+
+  if (isClerkConfigured()) {
+    const toggle = root.querySelector('#clerk-toggle');
+
+    const exchange = async (sessionToken) => {
+      errorBox.hidden = true;
+      toggle.disabled = true;
+      toggle.innerHTML = `<span class="spinner spinner-dark"></span><span>Checking access...</span>`;
+      try {
+        const res = await api.exchangeClerkToken(sessionToken);
+        auth.set(res.access_token, res.user);
+        navigate('/');
+      } catch (err) {
+        showError(err.message || 'Clerk login was verified, but this user is not approved in WatchTower.');
+        toggle.disabled = false;
+        toggle.innerHTML = `<span>Continue with Clerk</span>`;
+      }
+    };
+
+    if (consumeClerkRedirectPending()) {
+      exchangeCurrentClerkSession(exchange).catch((err) => {
+        showError(err.message || 'Could not complete Clerk login.');
+      });
+    }
+
+    toggle.addEventListener('click', async () => {
+      errorBox.hidden = true;
+      toggle.disabled = true;
+      toggle.innerHTML = `<span class="spinner spinner-dark"></span><span>Opening Clerk...</span>`;
+      try {
+        await redirectToClerkSignIn();
+      } catch (err) {
+        showError(err.message || 'Could not open Clerk sign-in.');
+        toggle.disabled = false;
+        toggle.innerHTML = `<span>Continue with Clerk</span>`;
+      }
+    });
+  }
 }

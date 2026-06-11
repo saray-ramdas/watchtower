@@ -307,6 +307,33 @@ a:hover { color: var(--blue-400); }
   color: var(--blue-500);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.clerk-toggle-btn {
+  border: 1px solid var(--border);
+  color: var(--text);
+  height: 44px;
+}
+
+
 .setup-badge {
   display: inline-flex;
   align-items: center;

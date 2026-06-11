@@ -1,4 +1,5 @@
 import { api, auth } from '../api.js';
+import { signOut } from '../session.js';
 import { alertIcon, initials, logoMark } from '../ui.js';
 
 const plusIcon = `
@@ -87,9 +88,8 @@ export async function renderHome(root, { navigate }) {
     </div>
   `;
 
-  root.querySelector('#logout-btn').addEventListener('click', () => {
-    auth.clear();
-    navigate('/login');
+  root.querySelector('#logout-btn').addEventListener('click', async () => {
+    await signOut(navigate);
   });
 
   await loadProjects(root, { user });

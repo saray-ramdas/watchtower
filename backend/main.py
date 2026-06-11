@@ -22,10 +22,19 @@ GROQ_MASK_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MASK_MODEL = "llama-3.1-8b-instant"
 
 import models
-from auth import create_access_token, get_current_user, hash_password, verify_password
+from auth import (
+    create_access_token,
+    email_domain_allowed,
+    get_clerk_user_email,
+    get_current_user,
+    hash_password,
+    verify_clerk_session_token,
+    verify_password,
+)
 from database import Base, engine, get_db
 from schemas import (
     BlockedReason,
+    ClerkExchangeRequest,
     Detection,
     EndpointCreate,
     EndpointResponse,
@@ -115,6 +124,33 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    token = create_access_token(subject=user.email)
+    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+
+
+@app.post("/api/auth/clerk/exchange", response_model=TokenResponse)
+async def clerk_exchange(payload: ClerkExchangeRequest, db: Session = Depends(get_db)):
+    claims = verify_clerk_session_token(payload.session_token)
+    clerk_user_id = claims.get("sub")
+    if not clerk_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Clerk session.")
+
+    email = await get_clerk_user_email(clerk_user_id, claims)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clerk login is missing an email. Set CLERK_SECRET_KEY or add email to a Clerk JWT template.",
+        )
+    if not email_domain_allowed(email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email domain is not allowed.")
+
+    user = db.query(models.User).filter(models.User.email == email.lower()).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This Clerk user is not approved in WatchTower yet. Ask an admin to add this email first.",
+        )
+
     token = create_access_token(subject=user.email)
     return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
 
